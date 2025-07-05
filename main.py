@@ -9,7 +9,7 @@ calories_dataset = pd.read_csv("Data/calories.csv")
 exercise_dataset = pd.read_csv("Data/exercise.csv")
 #print(calories_dataset)
 
-training_dataset = pd.merge(calories_dataset, exercise_dataset, how='outer').drop(columns="User_ID").head(500)
+training_dataset = pd.merge(calories_dataset, exercise_dataset, how='outer').drop(columns="User_ID")
 #print(training_dataset.corr(numeric_only = True))
 """
 Correlation with Calories to Duration, Heart_Rate Body_Temp 
@@ -52,7 +52,7 @@ def plotModels(df, featuresNames, weights, bias, fig, axes):
 
     #sns.pairplot(df, x_vars=["Calories Predicted"], y_vars=["Duration", "Heart_Rate", "Body_Temp"])
     xFeature = ["Duration", "Heart_Rate", "Body_Temp"]
-    yFeature = ["Calories Predicted"]
+    yFeature = "Calories Predicted"
     for i in range(len(featuresNames)):
         axes[i+1].scatter(df[xFeature[i]], df[yFeature])
         axes[i+1].set_xlabel(xFeature[i])
@@ -116,18 +116,51 @@ def runModel(df, featureNames, labelName, learnRate, epochs, batchSize):
     model = buildModel(learnRate, featureNum)
     modelOutput = trainModel(model, features, label, epochs, batchSize)
 
-    print('\nSUCCESS: training experiment complete\n')
+    print('\nSUCCESS: training exp0eriment complete\n')
     print('{}'.format(modelInfo(featureNames, labelName, modelOutput)))
     makePlots(df, featureNames, labelName, modelOutput)
 
     return model
 
-learningRate = 0.005
+learningRate = 0.0025
 epochs = 50
-batchSize = 2
+batchSize = 25
 
 # Specify the feature and the label.
 features = ['Duration', 'Heart_Rate', 'Body_Temp' ]
 label = 'Calories'
 
 model_1 = runModel(training_dataset, features, label, learningRate, epochs, batchSize)
+
+def buildBatch(df, batchSize):
+    batch = df.sample(n=batchSize).copy()
+    batch.set_index(np.arange(batchSize), inplace=True)
+    return batch
+
+def predictCaloriesBurnt(model, df, features, label, batchSize = 50):
+    batch = buildBatch(df, batchSize)
+    predictedValues = model.predict_on_batch(x=batch.loc[:,features].values)
+    data = {"Calories Predicted": [], "Calories":[], "L1 Loss": [], 
+             features[0]: [], features[1]: [], features[2]: []}
+    for i in range(batchSize):
+        predicted = predictedValues[i][0]
+        observed = batch.at[i, label]
+        data["Calories Predicted"].append((predicted))
+        data["Calories"].append((observed))
+        data["L1 Loss"].append((abs(observed - predicted)))
+        data[features[0]].append(batch.at[i, features[0]])
+        data[features[1]].append(batch.at[i, features[1]])
+        data[features[2]].append(batch.at[i, features[2]])
+
+    output_df = pd.DataFrame(data)
+    return output_df
+
+def show_predictions(output):
+  header = "-" * 80
+  banner = header + "\n" + "|" + "PREDICTIONS".center(78) + "|" + "\n" + header
+  print(banner)
+  print(output)
+  return
+
+output = predictCaloriesBurnt(model_1, training_dataset, features, label)
+show_predictions(output)
