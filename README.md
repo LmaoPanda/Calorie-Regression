@@ -1,0 +1,1 @@
+Used basic linear regression again(for practice) to determine the amount of calories burnt based on heartrate, duration and body temperature. Mostly a python app utilizing pandas/keras/matplotlib and used to learn about ML.
